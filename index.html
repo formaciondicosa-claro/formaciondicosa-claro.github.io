@@ -1,487 +1,208 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Control de Equipos</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<title>Generar Token SGI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  :root {
+    --violeta:#a78bfa;
+    --violeta-osc:#7c3aed;
+    --bg:#0b0c1a;
+    --card:rgba(23,24,43,0.55);
+    --text:#e8e6ff;
+    --muted:#bfbde6;
+    --border:rgba(167,139,250,0.35);
+  }
+  * {
+    box-sizing:border-box;
+    font-family:Inter, Roboto, system-ui, sans-serif;
+  }
+  body {
+    margin:0;
+    padding:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:radial-gradient(circle at top left, rgba(124,58,237,0.25), #050617 60%);
+    color:var(--text);
+  }
+  .container {
+    width:90%;
+    max-width:600px;
+    padding:30px;
+    background:var(--card);
+    backdrop-filter:blur(14px);
+    border:1px solid var(--border);
+    border-radius:16px;
+    box-shadow:0 0 25px rgba(167,139,250,0.2);
+    animation:fadeIn .8s ease;
+  }
+  @keyframes fadeIn {
+    from {opacity:0; transform:translateY(10px);}
+    to {opacity:1;}
+  }
+  h2 {
+    text-align:center;
+    font-weight:700;
+    font-size:1.45rem;
+    margin-bottom:10px;
+    color:var(--violeta);
+  }
+  label {
+    margin-top:14px;
+    font-size:0.9rem;
+    font-weight:600;
+    display:block;
+    color:var(--text);
+  }
+  select, input[type="date"], input[type="time"], input[type="text"] {
+    width:100%;
+    padding:12px;
+    margin-top:6px;
+    background:#111827;
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+  }
+  select:focus, input:focus {
+    outline:1px solid var(--violeta-osc);
+  }
+  button {
+    margin-top:28px;
+    width:100%;
+    padding:13px;
+    font-size:1rem;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(130deg, var(--violeta-osc), var(--violeta));
+    color:white;
+    font-weight:600;
+    cursor:pointer;
+    transition:transform .2s ease, filter .2s ease;
+  }
+  button:hover {
+    transform:scale(1.03);
+    filter:brightness(1.1);
+  }
+  button:active {
+    transform:scale(.96);
+  }
+  .hidden{ display:none; }
+</style>
 </head>
 
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-
-  <div class="max-w-4xl mx-auto px-4 py-6">
-
-    <!-- HEADER -->
-    <header class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-bold">📦 Control de Equipos</h1>
-        <p class="text-xs text-slate-400">Mini app para solicitudes y control de préstamos</p>
-      </div>
-
-      <div id="user-info" class="hidden text-right text-xs text-slate-400">
-        <div id="user-email"></div>
-        <button id="logout-btn" class="mt-1 text-amber-400 underline">Cerrar sesión</button>
-      </div>
-    </header>
-
-    <!-- LOGIN -->
-    <section id="login-view" class="mt-10">
-      <div class="bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-700 text-center">
-        <p class="text-sm mb-4 text-slate-300">Inicia sesión con tu cuenta de Google.</p>
-
-        <button id="login-btn"
-          class="px-4 py-2 bg-sky-600 rounded-full hover:bg-sky-500 text-sm">
-          Iniciar sesión con Google
-        </button>
-      </div>
-    </section>
-
-    <!-- FORMADOR -->
-    <section id="formador-view" class="hidden space-y-6">
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Nueva solicitud</h2>
-
-        <label class="block text-xs mb-1">Formador</label>
-        <select id="formador-select" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs mb-2"></select>
-
-        <label class="block text-xs mb-1">Tipo de equipo</label>
-        <select id="tipo-equipo-form" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs"></select>
-
-        <label class="block text-xs mb-1 mt-2">Equipo</label>
-        <select id="equipo-form" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs"></select>
-
-        <label class="block text-xs mb-1 mt-2">Fecha de uso</label>
-        <input id="fecha-uso" type="date" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-
-        <label class="block text-xs mb-1 mt-2">Motivo</label>
-        <input id="motivo" type="text" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-
-        <button id="btn-enviar-solicitud"
-          class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-full text-xs">
-          Enviar solicitud
-        </button>
-
-        <div id="formador-status" class="text-[11px] mt-2"></div>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Mis solicitudes</h2>
-        <div id="mis-solicitudes" class="space-y-2"></div>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Historial personal</h2>
-        <div id="historial-formador" class="space-y-1 text-xs"></div>
-      </div>
-
-    </section>
-
-    <!-- ADMIN -->
-    <section id="admin-view" class="hidden space-y-5">
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Solicitudes pendientes</h2>
-        <div id="lista-pendientes" class="space-y-2"></div>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Equipos prestados</h2>
-        <div id="lista-prestados" class="space-y-2"></div>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Equipos registrados</h2>
-        <div id="lista-equipos" class="space-y-1 text-xs"></div>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h2 class="text-sm font-semibold mb-2">Historial de préstamos</h2>
-        <div id="historial-admin" class="space-y-1 text-xs"></div>
-      </div>
-
-    </section>
-  </div>
-
-  <!-- FIREBASE -->
-  <script type="module">
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      GoogleAuthProvider,
-      signInWithPopup,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-    import {
-      getFirestore, collection, getDocs, addDoc,
-      onSnapshot, updateDoc, doc, setDoc, getDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBCLna-fGM4c7cpUcHnZzUY01Jfkk22u3A",
-      authDomain: "equipos-de-formacion.firebaseapp.com",
-      projectId: "equipos-de-formacion",
-      storageBucket: "equipos-de-formacion.appspot.com",
-      messagingSenderId: "249416438280",
-      appId: "1:249416438280:web:be76d25b13c7763abcb7bd",
-      measurementId: "G-TTJ1WJNZ2N"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getFirestore();
-
-    /* FORMADORES */
-    const FORMADORES = [
-      { nombre: "Duber Herney Muñoz Ramos", email: "duber.munoz@dico.com.co" },
-      { nombre: "Jose Daniel Rubiano Rodriguez", email: "jose.rubiano@dico.com.co" },
-      { nombre: "Miguel Oswaldo Gonzalez Castaño", email: "miguel.gonzalez@dico.com.co" },
-      { nombre: "Sebastian David Merchán Junca", email: "sebastian.merchan@dico.com.co" },
-      { nombre: "Nestor Jair Basante Apraez", email: "jair.basante@dico.com.co" },
-      { nombre: "Andres Felipe Tarazona", email: "andres.tarazon@dico.com.co" },
-      { nombre: "Juan Felipe Villamil Torres", email: "juan.villamil@dico.com.co" }
-    ];
-
-    const EQUIPOS_SEMILLA = [
-      { tipo: "Medidor de campo", nombre: "Trilithic 360 Dsp", serie: "360624417" },
-      { tipo: "Decodificador", nombre: "Smart speaker", serie: "1" },
-      { tipo: "Decodificador", nombre: "Claro box", serie: "D4CFF998DF9" },
-      { tipo: "Mesh router", nombre: "Mesh newland", serie: "810325160052873" },
-      { tipo: "Mesh router", nombre: "Mesh newland", serie: "810325160053523" },
-      { tipo: "Mesh router", nombre: "Mesh newland", serie: "810325160052734" }
-    ];
-
-    const ADMIN_EMAIL = "formaciondicosa@gmail.com";
-
-    /* REFERENCIAS */
-    const loginView = document.getElementById("login-view");
-    const formadorView = document.getElementById("formador-view");
-    const adminView = document.getElementById("admin-view");
-    const loginBtn = document.getElementById("login-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-    const userInfo = document.getElementById("user-info");
-    const userEmailEl = document.getElementById("user-email");
-
-    const formadorSelect = document.getElementById("formador-select");
-    const tipoEquipoForm = document.getElementById("tipo-equipo-form");
-    const equipoForm = document.getElementById("equipo-form");
-    const fechaUso = document.getElementById("fecha-uso");
-    const motivo = document.getElementById("motivo");
-    const formadorStatus = document.getElementById("formador-status");
-    const btnEnviar = document.getElementById("btn-enviar-solicitud");
-    const misSolicitudes = document.getElementById("mis-solicitudes");
-
-    const listaPendientes = document.getElementById("lista-pendientes");
-    const listaPrestados = document.getElementById("lista-prestados");
-    const listaEquipos = document.getElementById("lista-equipos");
-
-    /* LOGIN */
-    loginBtn.onclick = () => {
-      signInWithPopup(auth, new GoogleAuthProvider());
-    };
-
-    logoutBtn.onclick = () => signOut(auth);
-
-    /* DETECCIÓN LOGIN */
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        loginView.classList.remove("hidden");
-        formadorView.classList.add("hidden");
-        adminView.classList.add("hidden");
-        userInfo.classList.add("hidden");
-        return;
-      }
-
-      loginView.classList.add("hidden");
-      userInfo.classList.remove("hidden");
-      userEmailEl.textContent = user.email;
-
-      const equiposSnap = await getDocs(collection(db, "equipos"));
-      if (equiposSnap.empty) {
-        for (const eq of EQUIPOS_SEMILLA) {
-          await addDoc(collection(db, "equipos"), { ...eq, estado: "disponible" });
-        }
-      }
-
-      if (user.email === ADMIN_EMAIL) {
-        adminView.classList.remove("hidden");
-        formadorView.classList.add("hidden");
-        iniciarAdmin();
-      } else {
-        formadorView.classList.remove("hidden");
-        adminView.classList.add("hidden");
-        iniciarFormador();
-      }
-    });
-
-    /* FORMADOR */
-    async function iniciarFormador() {
-      formadorSelect.innerHTML = "";
-      FORMADORES.forEach(f => {
-        const opt = document.createElement("option");
-        opt.value = f.nombre;
-        opt.textContent = f.nombre;
-        formadorSelect.appendChild(opt);
-      });
-
-      cargarEquiposForm();
-      escucharMisSolicitudes();
-      cargarHistorialFormador();
-    }
-
-    async function cargarEquiposForm() {
-      const snapshot = await getDocs(collection(db, "equipos"));
-      const equipos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      const tipos = [...new Set(equipos.map(e => e.tipo))];
-      tipoEquipoForm.innerHTML = "";
-      tipos.forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        tipoEquipoForm.appendChild(opt);
-      });
-
-      tipoEquipoForm.onchange = () => llenarEquipos(equipos);
-      llenarEquipos(equipos);
-    }
-
-    function llenarEquipos(equipos) {
-      const tipo = tipoEquipoForm.value;
-      equipoForm.innerHTML = "";
-      equipos
-        .filter(e => e.tipo === tipo && e.estado !== "prestado")
-        .forEach(e => {
-          const opt = document.createElement("option");
-          opt.value = e.id;
-          opt.textContent = `${e.nombre} (${e.serie})`;
-          equipoForm.appendChild(opt);
-        });
-    }
-
-    btnEnviar.onclick = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const data = {
-        equipoId: equipoForm.value,
-        formadorNombre: formadorSelect.value,
-        formadorEmail: user.email,
-        fechaUso: fechaUso.value,
-        motivo: motivo.value.trim(),
-        estado: "pendiente",
-        fechaSolicitud: new Date()
-      };
-
-      await addDoc(collection(db, "solicitudes"), data);
-      formadorStatus.textContent = "Solicitud enviada";
-      formadorStatus.className = "text-[11px] text-emerald-400";
-      motivo.value = "";
-    };
-
-    /* Mostrar solicitudes del Formador con nombre + serie */
-    function escucharMisSolicitudes() {
-      const user = auth.currentUser;
-
-      onSnapshot(collection(db, "solicitudes"), async (snap) => {
-        misSolicitudes.innerHTML = "";
-
-        for (const docSnap of snap.docs) {
-          const s = docSnap.data();
-          if (s.formadorEmail !== user.email) continue;
-
-          const div = document.createElement("div");
-          div.className = "border border-slate-700 rounded px-3 py-2";
-
-          let equipoTexto = "Equipo pendiente";
-          if (s.equipoId) {
-            const eqSnap = await getDoc(doc(db, "equipos", s.equipoId));
-            if (eqSnap.exists()) {
-              const eq = eqSnap.data();
-              equipoTexto = `${eq.nombre} (${eq.serie})`;
-            }
-          }
-
-          div.innerHTML = `
-            <div class="font-medium">${equipoTexto}</div>
-            <div class="text-[11px] text-slate-400">
-              ${s.fechaUso} • Estado: ${s.estado}
-            </div>
-            <div class="text-[11px] text-slate-400 mt-1">
-              Motivo: ${s.motivo}
-            </div>
-          `;
-          misSolicitudes.appendChild(div);
-        }
-      });
-    }
-
-    /* ADMIN */
-    function iniciarAdmin() {
-      escucharSolicitudes();
-      escucharEquipos();
-      cargarHistorialAdmin();
-    }
-
-    function escucharSolicitudes() {
-      onSnapshot(collection(db, "solicitudes"), (snap) => {
-        listaPendientes.innerHTML = "";
-        listaPrestados.innerHTML = "";
-
-        snap.docs.forEach(docSnap => {
-          const s = { id: docSnap.id, ...docSnap.data() };
-
-          if (s.estado === "pendiente") {
-            const div = document.createElement("div");
-            div.className = "border border-slate-700 rounded px-3 py-2";
-            div.innerHTML = `
-              <div class="font-medium">${s.motivo}</div>
-              <div class="text-[11px] text-slate-400">${s.formadorNombre} (${s.formadorEmail})</div>
-              <button class="w-full mt-2 py-1 bg-sky-600 rounded-full text-xs"
-                onclick="aprobar('${s.id}','${s.equipoId}')">Entregar</button>
-            `;
-            listaPendientes.appendChild(div);
-          }
-
-          if (s.estado === "entregado") {
-            const div = document.createElement("div");
-            div.className = "border border-slate-700 rounded px-3 py-2";
-
-            const equipoRef = doc(db, "equipos", s.equipoId);
-            getDoc(equipoRef).then(eqSnap => {
-              if (eqSnap.exists()) {
-                const eq = eqSnap.data();
-                div.innerHTML = `
-                  <div class="font-medium">${eq.tipo} — ${eq.nombre} (${eq.serie})</div>
-                  <div class="text-[11px] text-slate-400">${s.formadorNombre} (${s.formadorEmail})</div>
-
-                  <button class="w-full mt-2 py-1 bg-emerald-600 rounded-full text-xs"
-                    onclick="devolver('${s.id}','${s.equipoId}')">
-                    Marcar devuelto
-                  </button>
-                `;
-              }
-            });
-
-            listaPrestados.appendChild(div);
-          }
-        });
-      });
-    }
-
-    function escucharEquipos() {
-      onSnapshot(collection(db, "equipos"), (snap) => {
-        listaEquipos.innerHTML = "";
-        snap.docs.forEach(d => {
-          const e = d.data();
-          const div = document.createElement("div");
-          div.className = "border border-slate-700 rounded px-3 py-1";
-          div.innerHTML = `
-            ${e.tipo} — ${e.nombre} (${e.serie})
-            <span class="text-[10px] text-slate-400 float-right">${e.estado}</span>
-          `;
-          listaEquipos.appendChild(div);
-        });
-      });
-    }
-
-    /* Guardar historial en Firestore */
-    window.aprobar = async (solId, equipoId) => {
-      const solRef = doc(db, "solicitudes", solId);
-      const solSnap = await getDoc(solRef);
-      const sol = solSnap.data();
-
-      await updateDoc(solRef, { estado: "entregado", fechaEntrega: new Date() });
-      await updateDoc(doc(db, "equipos", equipoId), { estado: "prestado" });
-
-      await addDoc(collection(db, "historial"), {
-        equipoId,
-        formadorNombre: sol.formadorNombre,
-        formadorEmail: sol.formadorEmail,
-        motivo: sol.motivo,
-        fechaUso: sol.fechaUso,
-        fechaEntrega: new Date(),
-        fechaDevolucion: null,
-        estado: "entregado"
-      });
-    };
-
-    window.devolver = async (solId, equipoId) => {
-      const solRef = doc(db, "solicitudes", solId);
-      await updateDoc(solRef, { estado: "devuelto", fechaDevolucion: new Date() });
-      await updateDoc(doc(db, "equipos", equipoId), { estado: "disponible" });
-
-      const historialSnap = await getDocs(collection(db, "historial"));
-      historialSnap.docs
-        .filter(d => d.data().equipoId === equipoId && !d.data().fechaDevolucion)
-        .forEach(async d => {
-          await updateDoc(doc(db, "historial", d.id), {
-            fechaDevolucion: new Date(),
-            estado: "devuelto"
-          });
-        });
-    };
-
-    /* Mostrar historial en ADMIN */
-    function cargarHistorialAdmin() {
-      onSnapshot(collection(db, "historial"), async (snap) => {
-        const cont = document.getElementById("historial-admin");
-        if (!cont) return;
-        cont.innerHTML = "";
-
-        for (const d of snap.docs) {
-          const h = d.data();
-          const eqSnap = await getDoc(doc(db, "equipos", h.equipoId));
-          const eq = eqSnap.data();
-
-          const div = document.createElement("div");
-          div.className = "border border-slate-700 rounded px-3 py-1";
-          div.innerHTML = `
-            ${eq.nombre} (${eq.serie}) — ${h.formadorNombre}
-            <div class="text-[10px] text-slate-400">
-              Entregado: ${h.fechaEntrega?.toDate().toLocaleString()}
-              ${h.fechaDevolucion ? ` | Devuelto: ${h.fechaDevolucion.toDate().toLocaleString()}` : ""}
-            </div>
-          `;
-          cont.appendChild(div);
-        }
-      });
-    }
-
-    /* Mostrar historial personal */
-    function cargarHistorialFormador() {
-      const user = auth.currentUser;
-
-      onSnapshot(collection(db, "historial"), async (snap) => {
-        const cont = document.getElementById("historial-formador");
-        if (!cont) return;
-        cont.innerHTML = "";
-
-        for (const d of snap.docs) {
-          const h = d.data();
-          if (h.formadorEmail !== user.email) continue;
-
-          const eqSnap = await getDoc(doc(db, "equipos", h.equipoId));
-          const eq = eqSnap.data();
-
-          const div = document.createElement("div");
-          div.className = "border border-slate-700 rounded px-3 py-1";
-          div.innerHTML = `
-            ${eq.nombre} (${eq.serie})
-            <div class="text-[10px] text-slate-400">
-              Entregado: ${h.fechaEntrega?.toDate().toLocaleString()}
-              ${h.fechaDevolucion ? ` | Devuelto: ${h.fechaDevolucion.toDate().toLocaleString()}` : ""}
-            </div>
-          `;
-          cont.appendChild(div);
-        }
-      });
-    }
-
-  </script>
-
+<body>
+<div class="container">
+  <h2>Generar Token de Capacitación</h2>
+
+  <form method="POST"
+        action="https://script.google.com/macros/s/AKfycbxKnKr51sIrPGAHLvvWEWpDiM5tUyUEJgXGWfdfFzRp7sybvWoR7JSy3SSKJi53KZLE/exec"
+        onsubmit="return validarFormulario(this)">
+
+    <label>Nombre del Formador:</label>
+    <select name="formador" required>
+      <option value="">Seleccione...</option>
+      <option>Duber Herney Muñoz Ramos</option>
+      <option>Jose Daniel Rubiano Rodriguez</option>
+      <option>Miguel Oswaldo Gonzalez Castaño</option>
+      <option>Sebastian David Merchán Junca</option>
+      <option>Nestor Jair Basante Apraez</option>
+      <option>Andres Felipe Tarazona</option>
+      <option>Juan Felipe Villamil Torres</option>
+    </select>
+
+    <label>Tipo de Capacitación:</label>
+    <select name="tipo" id="tipo" onchange="mostrarTema()" required>
+      <option value="">Seleccione...</option>
+      <option>Formación inicial masivo</option>
+      <option>Excelencia operativa</option>
+      <option>Personal en ascenso</option>
+      <option>Preturnos</option>
+      <option>Capacitacion precertificación</option>
+      <option>Certificación al cargo</option>
+    </select>
+
+    <div id="temaSelectContainer" class="hidden">
+      <label>Tema:</label>
+      <select name="tema" id="temaSelect">
+        <option value="">Seleccione...</option>
+        <option>Dia 1 (Inducción corporativa cliente, modelo gana)</option>
+        <option>Dia 2 (Fundamentos de telecomunicaciones - espectro electromagnetico)</option>
+        <option>Dia 3 (Conectorización, herramienta, acometidas en redes hfc, materiales para una instalación)</option>
+        <option>Dia 4 (Calibración interna en redes hfc, medidor de campo trilitic dsp 360)</option>
+        <option>Dia 5 (CPE´s, red móvil 5G, OFSC, aplicativos cliente, conectorización norma T568B)</option>
+        <option>Dia 6 (Fundamentos FTTH, redes neutras)</option>
+        <option>Dia 7 (Conectorización redes FTTH, mediciones, tipos de conectores, materiales para una instalación FTTH)</option>
+        <option>Dia 8 (Practica de alturas)</option>
+        <option>Dia 9 (Inducción SSTA cliente, riesgo eléctrico)</option>
+      </select>
+    </div>
+
+    <div id="temaInputContainer" class="hidden">
+      <label>Tema:</label>
+      <input type="text" name="tema" id="temaInput" placeholder="Escriba el tema">
+    </div>
+
+    <label>Fecha:</label>
+    <input type="date" name="fecha" required>
+
+    <label>Hora de inicio:</label>
+    <input type="time" name="horaInicio" required>
+
+    <label>Duración (horas):</label>
+    <select name="duracion" required>
+      <option value="">Seleccione...</option>
+      <option value="8">8 horas</option>
+      <option value="6">6 horas</option>
+      <option value="4">4 horas</option>
+      <option value="3">3 horas</option>
+      <option value="2">2 horas</option>
+    </select>
+
+    <button type="submit" id="submitBtn">Generar Token</button>
+  </form>
+</div>
+
+<script>
+function mostrarTema(){
+  const tipo = document.getElementById('tipo').value;
+  const s = document.getElementById('temaSelectContainer');
+  const i = document.getElementById('temaInputContainer');
+  if (tipo === "Formación inicial masivo") {
+    s.classList.remove('hidden');
+    i.classList.add('hidden');
+    document.getElementById('temaInput').value = "";
+  } else if (tipo !== "") {
+    s.classList.add('hidden');
+    i.classList.remove('hidden');
+    document.getElementById('temaSelect').value = "";
+  } else {
+    s.classList.add('hidden');
+    i.classList.add('hidden');
+    document.getElementById('temaSelect').value = "";
+    document.getElementById('temaInput').value = "";
+  }
+}
+
+function validarFormulario(form){
+  const tipo = form.tipo.value.trim();
+  const temaSelect = document.getElementById('temaSelect').value.trim();
+  const temaInput = document.getElementById('temaInput').value.trim();
+  let tema = (tipo === "Formación inicial masivo") ? temaSelect : temaInput;
+
+  if (!form.formador.value.trim() || !tipo || !form.fecha.value.trim() || !tema ||
+      !form.horaInicio.value.trim() || !form.duracion.value.trim()) {
+    alert("Por favor complete todos los campos.");
+    return false;
+  }
+
+  document.getElementById('submitBtn').innerText = "Generando...";
+  document.getElementById('submitBtn').disabled = true;
+  return true;
+}
+</script>
 </body>
 </html>
