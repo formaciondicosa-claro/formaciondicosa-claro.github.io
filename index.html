@@ -70,6 +70,11 @@
         <div id="mis-solicitudes" class="space-y-2"></div>
       </div>
 
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <h2 class="text-sm font-semibold mb-2">Historial personal</h2>
+        <div id="historial-formador" class="space-y-1 text-xs"></div>
+      </div>
+
     </section>
 
     <!-- ADMIN -->
@@ -90,9 +95,13 @@
         <div id="lista-equipos" class="space-y-1 text-xs"></div>
       </div>
 
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <h2 class="text-sm font-semibold mb-2">Historial de préstamos</h2>
+        <div id="historial-admin" class="space-y-1 text-xs"></div>
+      </div>
+
     </section>
   </div>
-
 
   <!-- FIREBASE -->
   <script type="module">
@@ -111,7 +120,6 @@
       onSnapshot, updateDoc, doc, setDoc, getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-
     const firebaseConfig = {
       apiKey: "AIzaSyBCLna-fGM4c7cpUcHnZzUY01Jfkk22u3A",
       authDomain: "equipos-de-formacion.firebaseapp.com",
@@ -126,7 +134,6 @@
     const auth = getAuth();
     const db = getFirestore();
 
-
     /* FORMADORES */
     const FORMADORES = [
       { nombre: "Duber Herney Muñoz Ramos", email: "duber.munoz@dico.com.co" },
@@ -138,7 +145,6 @@
       { nombre: "Juan Felipe Villamil Torres", email: "juan.villamil@dico.com.co" }
     ];
 
-    /* EQUIPOS SEMILLA (solo se cargan si NO existen) */
     const EQUIPOS_SEMILLA = [
       { tipo: "Medidor de campo", nombre: "Trilithic 360 Dsp", serie: "360624417" },
       { tipo: "Decodificador", nombre: "Smart speaker", serie: "1" },
@@ -149,7 +155,6 @@
     ];
 
     const ADMIN_EMAIL = "formaciondicosa@gmail.com";
-
 
     /* REFERENCIAS */
     const loginView = document.getElementById("login-view");
@@ -173,14 +178,12 @@
     const listaPrestados = document.getElementById("lista-prestados");
     const listaEquipos = document.getElementById("lista-equipos");
 
-
     /* LOGIN */
     loginBtn.onclick = () => {
       signInWithPopup(auth, new GoogleAuthProvider());
     };
 
     logoutBtn.onclick = () => signOut(auth);
-
 
     /* DETECCIÓN LOGIN */
     onAuthStateChanged(auth, async (user) => {
@@ -196,13 +199,10 @@
       userInfo.classList.remove("hidden");
       userEmailEl.textContent = user.email;
 
-      // Cargar semilla solo si está vacío
       const equiposSnap = await getDocs(collection(db, "equipos"));
       if (equiposSnap.empty) {
         for (const eq of EQUIPOS_SEMILLA) {
-          const existe = equiposSnap.docs.find(d => d.data().serie === eq.serie);
-          if (!existe)
-            await addDoc(collection(db, "equipos"), { ...eq, estado: "disponible" });
+          await addDoc(collection(db, "equipos"), { ...eq, estado: "disponible" });
         }
       }
 
@@ -217,7 +217,6 @@
       }
     });
 
-
     /* FORMADOR */
     async function iniciarFormador() {
       formadorSelect.innerHTML = "";
@@ -230,6 +229,7 @@
 
       cargarEquiposForm();
       escucharMisSolicitudes();
+      cargarHistorialFormador();
     }
 
     async function cargarEquiposForm() {
@@ -262,7 +262,6 @@
         });
     }
 
-
     btnEnviar.onclick = async () => {
       const user = auth.currentUser;
       if (!user) return;
@@ -283,40 +282,48 @@
       motivo.value = "";
     };
 
-
+    /* Mostrar solicitudes del Formador con nombre + serie */
     function escucharMisSolicitudes() {
       const user = auth.currentUser;
 
-      onSnapshot(
-        collection(db, "solicitudes"),
-        (snap) => {
-          misSolicitudes.innerHTML = "";
+      onSnapshot(collection(db, "solicitudes"), async (snap) => {
+        misSolicitudes.innerHTML = "";
 
-          snap.docs
-            .filter(d => d.data().formadorEmail === user.email)
-            .forEach(doc => {
-              const s = doc.data();
-              const div = document.createElement("div");
-              div.className = "border border-slate-700 rounded px-3 py-2";
+        for (const docSnap of snap.docs) {
+          const s = docSnap.data();
+          if (s.formadorEmail !== user.email) continue;
 
-              div.innerHTML = `
-                <div class="font-medium">${s.motivo}</div>
-                <div class="text-[11px] text-slate-400">
-                  ${s.fechaUso} • Estado: ${s.estado}
-                </div>
-              `;
+          const div = document.createElement("div");
+          div.className = "border border-slate-700 rounded px-3 py-2";
 
-              misSolicitudes.appendChild(div);
-            });
+          let equipoTexto = "Equipo pendiente";
+          if (s.equipoId) {
+            const eqSnap = await getDoc(doc(db, "equipos", s.equipoId));
+            if (eqSnap.exists()) {
+              const eq = eqSnap.data();
+              equipoTexto = `${eq.nombre} (${eq.serie})`;
+            }
+          }
+
+          div.innerHTML = `
+            <div class="font-medium">${equipoTexto}</div>
+            <div class="text-[11px] text-slate-400">
+              ${s.fechaUso} • Estado: ${s.estado}
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1">
+              Motivo: ${s.motivo}
+            </div>
+          `;
+          misSolicitudes.appendChild(div);
         }
-      );
+      });
     }
-
 
     /* ADMIN */
     function iniciarAdmin() {
       escucharSolicitudes();
       escucharEquipos();
+      cargarHistorialAdmin();
     }
 
     function escucharSolicitudes() {
@@ -381,17 +388,98 @@
       });
     }
 
-
-    /* FUNCIONES ADMIN */
+    /* Guardar historial en Firestore */
     window.aprobar = async (solId, equipoId) => {
-      await updateDoc(doc(db, "solicitudes", solId), { estado: "entregado" });
+      const solRef = doc(db, "solicitudes", solId);
+      const solSnap = await getDoc(solRef);
+      const sol = solSnap.data();
+
+      await updateDoc(solRef, { estado: "entregado", fechaEntrega: new Date() });
       await updateDoc(doc(db, "equipos", equipoId), { estado: "prestado" });
+
+      await addDoc(collection(db, "historial"), {
+        equipoId,
+        formadorNombre: sol.formadorNombre,
+        formadorEmail: sol.formadorEmail,
+        motivo: sol.motivo,
+        fechaUso: sol.fechaUso,
+        fechaEntrega: new Date(),
+        fechaDevolucion: null,
+        estado: "entregado"
+      });
     };
 
     window.devolver = async (solId, equipoId) => {
-      await updateDoc(doc(db, "solicitudes", solId), { estado: "devuelto" });
+      const solRef = doc(db, "solicitudes", solId);
+      await updateDoc(solRef, { estado: "devuelto", fechaDevolucion: new Date() });
       await updateDoc(doc(db, "equipos", equipoId), { estado: "disponible" });
+
+      const historialSnap = await getDocs(collection(db, "historial"));
+      historialSnap.docs
+        .filter(d => d.data().equipoId === equipoId && !d.data().fechaDevolucion)
+        .forEach(async d => {
+          await updateDoc(doc(db, "historial", d.id), {
+            fechaDevolucion: new Date(),
+            estado: "devuelto"
+          });
+        });
     };
+
+    /* Mostrar historial en ADMIN */
+    function cargarHistorialAdmin() {
+      onSnapshot(collection(db, "historial"), async (snap) => {
+        const cont = document.getElementById("historial-admin");
+        if (!cont) return;
+        cont.innerHTML = "";
+
+        for (const d of snap.docs) {
+          const h = d.data();
+          const eqSnap = await getDoc(doc(db, "equipos", h.equipoId));
+          const eq = eqSnap.data();
+
+          const div = document.createElement("div");
+          div.className = "border border-slate-700 rounded px-3 py-1";
+          div.innerHTML = `
+            ${eq.nombre} (${eq.serie}) — ${h.formadorNombre}
+            <div class="text-[10px] text-slate-400">
+              Entregado: ${h.fechaEntrega?.toDate().toLocaleString()}
+              ${h.fechaDevolucion ? ` | Devuelto: ${h.fechaDevolucion.toDate().toLocaleString()}` : ""}
+            </div>
+          `;
+          cont.appendChild(div);
+        }
+      });
+    }
+
+    /* Mostrar historial personal */
+    function cargarHistorialFormador() {
+      const user = auth.currentUser;
+
+      onSnapshot(collection(db, "historial"), async (snap) => {
+        const cont = document.getElementById("historial-formador");
+        if (!cont) return;
+        cont.innerHTML = "";
+
+        for (const d of snap.docs) {
+          const h = d.data();
+          if (h.formadorEmail !== user.email) continue;
+
+          const eqSnap = await getDoc(doc(db, "equipos", h.equipoId));
+          const eq = eqSnap.data();
+
+          const div = document.createElement("div");
+          div.className = "border border-slate-700 rounded px-3 py-1";
+          div.innerHTML = `
+            ${eq.nombre} (${eq.serie})
+            <div class="text-[10px] text-slate-400">
+              Entregado: ${h.fechaEntrega?.toDate().toLocaleString()}
+              ${h.fechaDevolucion ? ` | Devuelto: ${h.fechaDevolucion.toDate().toLocaleString()}` : ""}
+            </div>
+          `;
+          cont.appendChild(div);
+        }
+      });
+    }
 
   </script>
 
